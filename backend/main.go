@@ -176,7 +176,8 @@ func main() {
 	}
 	mux.Handle("/fortunes", fortuneH)
 	mux.Handle("/fortunes/", fortuneH)
+	mux.Handle("/healthz", &healthzHandler{})
 
 	err := http.ListenAndServe(":9000", mux)
-    fmt.Printf("%v", err)
+	fmt.Printf("%v", err)
 }
