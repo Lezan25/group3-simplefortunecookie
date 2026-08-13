@@ -1,0 +1,46 @@
+name: Application Availability Test
+
+on:
+  pull_request:
+
+jobs:
+  availability-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker compose build
+
+      - name: Start application
+        run: |
+          docker compose up -d
+
+      - name: Wait for application
+        run: |
+          sleep 5
+
+      - name: Run availability test
+        run: |
+          chmod +x backend/testing/test.sh
+          ./backend/testing/test.sh \
+            http://localhost:8080 \
+            http://localhost:9000
+
+      - name: Show Docker status
+        if: always()
+        run: |
+          docker compose ps
+
+      - name: Show logs if test fails
+        if: failure()
+        run: |
+          docker compose logs
+
+      - name: Stop application
+        if: always()
+        run: |
+          docker compose down
