@@ -14,33 +14,10 @@ jobs:
       - name: Start application
         run: docker compose up -d --build
 
-      - name: Test frontend
+      - name: Test application
         run: |
-          for i in {1..10}; do
-            if curl --fail --silent http://localhost:8080/healthz; then
-              echo "Frontend is healthy"
-              exit 0
-            fi
-            echo "Frontend not ready, retrying..."
-            sleep 2
-          done
-
-          echo "Frontend health check failed"
-          exit 1
-
-      - name: Test backend
-        run: |
-          for i in {1..10}; do
-            if curl --fail --silent http://localhost:9000/healthz; then
-              echo "Backend is healthy"
-              exit 0
-            fi
-            echo "Backend not ready, retrying..."
-            sleep 2
-          done
-
-          echo "Backend health check failed"
-          exit 1
+          chmod +x testing/test.sh
+          ./testing/test.sh
 
       - name: Stop application
         if: always()
