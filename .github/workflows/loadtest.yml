@@ -1,0 +1,30 @@
+name: Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL to load test (e.g. http://<node-ip>:31502/api/random)"
+        required: true
+      duration:
+        description: "Duration per concurrency level (siege -t format, e.g. 20S)"
+        required: false
+        default: "20S"
+      threshold:
+        description: "Minimum acceptable availability percentage"
+        required: false
+        default: "95"
+
+jobs:
+  loadtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bc
+        run: sudo apt-get update && sudo apt-get install -y bc
+
+      - name: Run load test
+        run: |
+          chmod +x ./loadtest.sh
+          ./loadtest.sh "${{ inputs.url }}" "${{ inputs.duration }}" "${{ inputs.threshold }}"
