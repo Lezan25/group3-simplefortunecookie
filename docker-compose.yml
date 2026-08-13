@@ -1,11 +1,11 @@
 services:
   backend:
-    image: aljazkni/simplefortunecookie-backend:latest
+    image: aljazkni/simplefortunecookie-backend:v1
     ports:
       - "9000:9000"
 
   frontend:
-    image: aljazkni/simplefortunecookie-frontend:latest
+    image: aljazkni/simplefortunecookie-frontend:v1
     ports:
       - "8080:8080"
     depends_on:
