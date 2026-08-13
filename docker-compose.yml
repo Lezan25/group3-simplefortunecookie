@@ -3,6 +3,10 @@ services:
     image: aljazkni/simplefortunecookie-backend:v1
     ports:
       - "9000:9000"
+    environment:
+      REDIS_DNS: redis
+    depends_on:
+      - redis
 
   frontend:
     image: aljazkni/simplefortunecookie-frontend:v1
@@ -10,3 +14,6 @@ services:
       - "8080:8080"
     depends_on:
       - backend
+
+  redis:
+    image: redis:7-alpine
