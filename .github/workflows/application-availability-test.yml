@@ -19,14 +19,10 @@ jobs:
         run: |
           docker compose up -d
 
-      - name: Wait for application
-        run: |
-          sleep 5
-
       - name: Run availability test
         run: |
-          chmod +x backend/testing/test.sh
-          ./backend/testing/test.sh \
+          chmod +x testing/test.sh
+          ./testing/test.sh \
             http://localhost:8080 \
             http://localhost:9000
 
