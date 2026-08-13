@@ -1,0 +1,19 @@
+name: Deploy to Kubernetes
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Deploy
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.head_ref }}" kubeconfig
