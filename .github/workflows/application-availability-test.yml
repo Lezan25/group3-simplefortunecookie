@@ -1,0 +1,26 @@
+name: Application Availability Test
+
+on:
+  workflow_run:
+      workflows: ["Deploy to Kubernetes"]
+      types: [completed]
+
+jobs:
+  availability-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start application
+        run: docker compose up -d --build
+
+      - name: Test application
+        run: |
+          chmod +x testing/test.sh
+          ./testing/test.sh
+
+      - name: Stop application
+        if: always()
+        run: docker compose down
