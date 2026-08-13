@@ -7,14 +7,14 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o server .
+RUN go build -o backend .
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/server .
+COPY --from=builder /app/backend .
 
 EXPOSE 9000
 
-CMD ["./server"]
+CMD ["./backend"]

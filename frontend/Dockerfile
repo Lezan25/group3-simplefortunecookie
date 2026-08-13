@@ -2,7 +2,7 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY go.mod ./
 RUN go mod download
 
 COPY . .
@@ -15,8 +15,8 @@ WORKDIR /app
 
 COPY --from=builder /app/frontend .
 
-COPY templates ./templates
-COPY static ./static
+COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/static ./static
 
 EXPOSE 8080
 
