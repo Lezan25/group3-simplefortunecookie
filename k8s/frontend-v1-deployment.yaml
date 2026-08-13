@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-v1
+  labels:
+    app: frontend
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: v1
+    spec:
+      containers:
+        - name: frontend
+          image: aljazkni/simplefortunecookie-frontend:v1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: BACKEND_DNS
+              value: "backend-v1"
+            - name: BACKEND_PORT
+              value: "9000"
