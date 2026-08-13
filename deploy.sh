@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: deploy.sh <branch-name> <kubeconfig-path>
+# Usage: deploy.sh <branch-name> <kubeconfig-path> [--delete]
 BRANCH_NAME="$1"
 KUBECONFIG_FILE="$2"
+ACTION="${3:-apply}"
 
 # Turn a branch name like "feature/add-cache" into a safe suffix like "feature-add-cache"
 SUFFIX=$(echo "$BRANCH_NAME" \
@@ -17,7 +18,7 @@ if [ -z "$SUFFIX" ]; then
   exit 1
 fi
 
-echo "Deploying with suffix: $SUFFIX"
+echo "Deployment suffix: $SUFFIX"
 
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
@@ -32,4 +33,21 @@ for f in "$WORKDIR"/*.yaml; do
     "$f"
 done
 
-kubectl --kubeconfig "$KUBECONFIG_FILE" apply -f "$WORKDIR"
+if [ "$ACTION" = "--delete" ]; then
+  echo "Deleting deployment with suffix: $SUFFIX"
+
+  kubectl \
+    --kubeconfig "$KUBECONFIG_FILE" \
+    delete \
+    -f "$WORKDIR" \
+    --ignore-not-found
+
+  exit 0
+fi
+
+echo "Deploying with suffix: $SUFFIX"
+
+kubectl \
+  --kubeconfig "$KUBECONFIG_FILE" \
+  apply \
+  -f "$WORKDIR"
