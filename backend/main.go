@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 var (
@@ -27,12 +29,22 @@ type datastore struct {
 	*sync.RWMutex
 }
 
-var datastoreDefault = datastore{m: map[string]fortune{
-	"1": {ID: "1", Message: "A new voyage will fill your life with untold memories."},
-	"2": {ID: "2", Message: "The measure of time to your next goal is the measure of your discipline."},
-	"3": {ID: "3", Message: "The only way to do well is to do better each day."},
-	"4": {ID: "4", Message: "It ain't over till it's EOF."},
-}, RWMutex: &sync.RWMutex{}}
+var defaultFortunes = []fortune{
+	{ID: "1", Message: "A new voyage will fill your life with untold memories."},
+	{ID: "2", Message: "The measure of time to your next goal is the measure of your discipline."},
+	{ID: "3", Message: "The only way to do well is to do better each day."},
+	{ID: "4", Message: "It ain't over till it's EOF."},
+}
+
+func newDefaultDatastore() datastore {
+	m := make(map[string]fortune, len(defaultFortunes))
+	for _, f := range defaultFortunes {
+		m[f.ID] = f
+	}
+	return datastore{m: m, RWMutex: &sync.RWMutex{}}
+}
+
+var datastoreDefault = newDefaultDatastore()
 
 type fortuneHandler struct {
 	store *datastore
@@ -59,13 +71,45 @@ func (h *fortuneHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *fortuneHandler) List(w http.ResponseWriter, r *http.Request) {
+// allFortunes returns every fortune. When Redis is configured it is the
+// single source of truth shared across all replicas; otherwise it falls
+// back to this pod's local in-memory store.
+func (h *fortuneHandler) allFortunes() ([]fortune, error) {
+	if usingRedis {
+		conn := dbPool.Get()
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Println("allFortunes: failed to close redis connection:", err)
+			}
+		}()
+
+		result, err := redis.StringMap(conn.Do("hgetall", "fortunes"))
+		if err != nil {
+			return nil, err
+		}
+
+		fortunes := make([]fortune, 0, len(result))
+		for id, msg := range result {
+			fortunes = append(fortunes, fortune{ID: id, Message: msg})
+		}
+		return fortunes, nil
+	}
+
 	h.store.RLock()
 	fortunes := make([]fortune, 0, len(h.store.m))
 	for _, v := range h.store.m {
 		fortunes = append(fortunes, v)
 	}
 	h.store.RUnlock()
+	return fortunes, nil
+}
+
+func (h *fortuneHandler) List(w http.ResponseWriter, r *http.Request) {
+	fortunes, err := h.allFortunes()
+	if err != nil {
+		internalServerError(w, r)
+		return
+	}
 
 	jsonBytes, err := json.Marshal(fortunes)
 	if err != nil {
@@ -79,12 +123,11 @@ func (h *fortuneHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *fortuneHandler) Random(w http.ResponseWriter, r *http.Request) {
-	h.store.RLock()
-	fortunes := make([]fortune, 0, len(h.store.m))
-	for _, v := range h.store.m {
-		fortunes = append(fortunes, v)
+	fortunes, err := h.allFortunes()
+	if err != nil {
+		internalServerError(w, r)
+		return
 	}
-	h.store.RUnlock()
 
 	if len(fortunes) > 0 {
 		u := fortunes[rand.Intn(len(fortunes))]

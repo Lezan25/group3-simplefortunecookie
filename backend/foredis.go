@@ -65,6 +65,17 @@ func init() {
 		return
 	}
 
+	if len(resKeys) == 0 {
+		fmt.Println("*** redis has no fortunes, seeding defaults")
+		for _, f := range defaultFortunes {
+			if _, err := conn.Do("hset", "fortunes", f.ID, f.Message); err != nil {
+				fmt.Println("redis hset failed while seeding", err.Error())
+			}
+		}
+		datastoreDefault = newDefaultDatastore()
+		return
+	}
+
 	datastoreDefault = datastore{m: map[string]fortune{}, RWMutex: &sync.RWMutex{}}
 	fmt.Printf("*** loading redis fortunes:\n")
 	for _, key := range resKeys {
