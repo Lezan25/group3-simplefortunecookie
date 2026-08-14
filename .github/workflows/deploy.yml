@@ -1,15 +1,48 @@
 name: Deploy to Kubernetes
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, closed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 jobs:
-  deploy:
-    if: github.event.action != 'closed'
+  lint-backend:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: backend
 
+  lint-frontend:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: frontend
+
+  trivy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - aljazkni/simplefortunecookie-frontend:v1
+          - aljazkni/simplefortunecookie-backend:v1
+    steps:
+      - name: Scan ${{ matrix.image }}
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ matrix.image }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  deploy:
+    needs: [lint-backend, lint-frontend, trivy]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -19,19 +52,4 @@ jobs:
       - name: Deploy
         run: |
           chmod +x ./deploy.sh
-          ./deploy.sh "${{ github.head_ref }}" kubeconfig
-
-  cleanup:
-    if: github.event.action == 'closed'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up kubeconfig
-        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
-
-      - name: Clean up deployment
-        run: |
-          chmod +x ./deploy.sh
-          ./deploy.sh "${{ github.head_ref }}" kubeconfig --delete
+          ./deploy.sh "${{ github.event.workflow_run.head_branch }}" kubeconfig
