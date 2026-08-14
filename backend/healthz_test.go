@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gomodule/redigo/redis"
 )
 
 type fakeRedisConn struct {
@@ -23,6 +25,16 @@ func (f *fakeRedisConn) Send(commandName string, args ...interface{}) error { re
 func (f *fakeRedisConn) Flush() error                                       { return nil }
 func (f *fakeRedisConn) Receive() (interface{}, error)                      { return nil, nil }
 
+func newFakePool(pingErr error) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:   1,
+		MaxActive: 1,
+		Dial: func() (redis.Conn, error) {
+			return &fakeRedisConn{pingErr: pingErr}, nil
+		},
+	}
+}
+
 func TestHealthz_NoRedisConfigured(t *testing.T) {
 	usingRedis = false
 
@@ -37,7 +49,7 @@ func TestHealthz_NoRedisConfigured(t *testing.T) {
 
 func TestHealthz_RedisUp(t *testing.T) {
 	usingRedis = true
-	dbLink = &fakeRedisConn{pingErr: nil}
+	dbPool = newFakePool(nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -50,7 +62,7 @@ func TestHealthz_RedisUp(t *testing.T) {
 
 func TestHealthz_RedisDown(t *testing.T) {
 	usingRedis = true
-	dbLink = &fakeRedisConn{pingErr: errors.New("connection refused")}
+	dbPool = newFakePool(errors.New("connection refused"))
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
