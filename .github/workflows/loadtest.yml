@@ -26,5 +26,5 @@ jobs:
 
       - name: Run load test
         run: |
-          chmod +x ./loadtest.sh
+          chmod +x ./testing/loadtest.sh
           ./loadtest.sh "${{ inputs.url }}" "${{ inputs.duration }}" "${{ inputs.threshold }}"

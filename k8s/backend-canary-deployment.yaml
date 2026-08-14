@@ -27,7 +27,7 @@ spec:
             - containerPort: 9000
           env:
             - name: REDIS_DNS
-              value: "redis://redis-__ENV__:6379"
+              value: "redis-__ENV__:6379"
           readinessProbe:
             httpGet:
               path: /healthz
