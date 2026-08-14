@@ -107,7 +107,9 @@ func (h *fortuneHandler) Get(w http.ResponseWriter, r *http.Request) {
 		key := matches[1]
 		conn := dbPool.Get()
 		val, err := conn.Do("hget", "fortunes", key)
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Println("Get: failed to close redis connection:", closeErr)
+		}
 		if err != nil {
 			fmt.Println("redis hget failed", err.Error())
 		} else {
@@ -155,7 +157,9 @@ func (h *fortuneHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if usingRedis {
 		conn := dbPool.Get()
 		_, err := conn.Do("hset", "fortunes", u.ID, u.Message)
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Println("Create: failed to close redis connection:", closeErr)
+		}
 		if err != nil {
 			fmt.Println("redis hset failed", err.Error())
 		}

@@ -13,7 +13,9 @@ func (h *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if usingRedis {
 		conn := dbPool.Get()
 		_, err := conn.Do("PING")
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Println("healthz: failed to close redis connection:", closeErr)
+		}
 		if err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			if _, writeErr := w.Write([]byte(`{"status":"unavailable","redis":"down"}`)); writeErr != nil {

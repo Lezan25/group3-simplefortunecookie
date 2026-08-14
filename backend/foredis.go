@@ -34,7 +34,9 @@ func init() {
 	for i := 0; i < 5; i++ {
 		conn := pool.Get()
 		_, err = conn.Do("PING")
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Println("redis: failed to close connection:", closeErr)
+		}
 		if err == nil {
 			usingRedis = true
 			break
@@ -51,7 +53,11 @@ func init() {
 	dbPool = pool
 
 	conn := dbPool.Get()
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Println("redis: failed to close connection:", err)
+		}
+	}()
 
 	resKeys, err := redis.Values(conn.Do("hkeys", "fortunes"))
 	if err != nil {
