@@ -1,12 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-v1
+  name: frontend-__ENV__
 spec:
   type: LoadBalancer
   selector:
     app: frontend
-    version: v1
+    env: __ENV__
+    track: stable
   ports:
     - port: 8080
       targetPort: 8080

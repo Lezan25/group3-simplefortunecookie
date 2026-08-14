@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   pull_request:
@@ -7,64 +7,45 @@ on:
     branches: [ main ]
 
 jobs:
-  frontend:
+  build-frontend:
     name: Build & Test Frontend
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
+      - run: go build ./...
+      - run: go test ./... -v
 
-      - name: Build
-        run: go build ./...
-
-      - name: Test
-        run: go test ./... -v
-
-  backend:
+  build-backend:
     name: Build & Test Backend
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
-      - name: Build
-        run: go build ./...
-
-      - name: Test
-        run: go test ./... -v
+      - run: go build ./...
+      - run: go test ./... -v
 
   docker:
     name: Build & Push Docker Images
     runs-on: ubuntu-latest
-    needs: [frontend, backend]
-
-    # Only push images after a successful push to main
+    needs: [build-frontend, build-backend]
     if: github.event_name == 'push'
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -74,11 +55,116 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: aljazkni/simplefortunecookie-backend:latest
+          tags: |
+            aljazkni/simplefortunecookie-backend:${{ github.sha }}
+            aljazkni/simplefortunecookie-backend:latest
 
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
-          tags: aljazkni/simplefortunecookie-frontend:latest
+          tags: |
+            aljazkni/simplefortunecookie-frontend:${{ github.sha }}
+            aljazkni/simplefortunecookie-frontend:latest
+
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    needs: [build-frontend, build-backend]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: frontend
+
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    needs: [build-frontend, build-backend]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: backend
+
+  trivy:
+    name: Scan Images
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        image:
+          - aljazkni/simplefortunecookie-frontend
+          - aljazkni/simplefortunecookie-backend
+    steps:
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  deploy-canary:
+    name: Deploy Canary
+    runs-on: ubuntu-latest
+    needs: [lint-frontend, lint-backend, trivy]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Deploy canary
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.ref_name }}" kubeconfig canary "${{ github.sha }}"
+
+  canary-test:
+    name: Test Canary
+    runs-on: ubuntu-latest
+    needs: deploy-canary
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Test canary
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.ref_name }}" kubeconfig test
+
+  promote:
+    name: Promote Canary to Stable
+    runs-on: ubuntu-latest
+    needs: canary-test
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Promote
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.ref_name }}" kubeconfig promote "${{ github.sha }}"
+
+  rollback:
+    name: Roll Back Canary
+    runs-on: ubuntu-latest
+    needs: canary-test
+    if: failure()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Roll back
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.ref_name }}" kubeconfig rollback

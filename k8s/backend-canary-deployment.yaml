@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-v1
+  name: backend-__ENV__
   labels:
     app: backend
-    version: v1
+    env: __ENV__
+    track: stable
 spec:
   replicas: 3
   strategy:
@@ -14,21 +15,23 @@ spec:
   selector:
     matchLabels:
       app: backend
-      version: v1
+      env: __ENV__
+      track: stable
   template:
     metadata:
       labels:
         app: backend
-        version: v1
+        env: __ENV__
+        track: stable
     spec:
       containers:
         - name: backend
-          image: aljazkni/simplefortunecookie-backend:v1
+          image: aljazkni/simplefortunecookie-backend:__IMAGE_TAG__
           ports:
             - containerPort: 9000
           env:
             - name: REDIS_DNS
-              value: "redis://redis:6379"
+              value: "redis://redis-__ENV__:6379"
           readinessProbe:
             httpGet:
               path: /healthz
