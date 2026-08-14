@@ -11,7 +11,10 @@ func (h *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 
 	if usingRedis {
-		if _, err := dbLink.Do("PING"); err != nil {
+		conn := dbPool.Get()
+		_, err := conn.Do("PING")
+		conn.Close()
+		if err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			if _, writeErr := w.Write([]byte(`{"status":"unavailable","redis":"down"}`)); writeErr != nil {
 				log.Println("healthz: failed to write response:", writeErr)
