@@ -1,28 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-__ENV__
+  name: backend-__ENV__-canary
   labels:
     app: backend
     env: __ENV__
-    track: stable
+    track: canary
 spec:
-  replicas: 3
-  strategy:
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+  replicas: 1
   selector:
     matchLabels:
       app: backend
       env: __ENV__
-      track: stable
+      track: canary
   template:
     metadata:
       labels:
         app: backend
         env: __ENV__
-        track: stable
+        track: canary
     spec:
       containers:
         - name: backend
