@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -72,7 +73,9 @@ func (h *fortuneHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	if _, err := w.Write(jsonBytes); err != nil {
+		log.Println("List: failed to write response:", err)
+	}
 }
 
 func (h *fortuneHandler) Random(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +110,7 @@ func (h *fortuneHandler) Get(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("redis hget failed", err.Error())
 		} else {
 			if val != nil {
-				msg := fmt.Sprintf("%s", val.([]byte))
+				msg := string(val.([]byte))
 				h.store.Lock()
 				h.store.m[key] = fortune{ID: key, Message: msg}
 				h.store.Unlock()
@@ -121,7 +124,9 @@ func (h *fortuneHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("fortune not found"))
+		if _, err := w.Write([]byte("fortune not found")); err != nil {
+			log.Println("Get: failed to write response:", err)
+		}
 		return
 	}
 	jsonBytes, err := json.Marshal(u)
@@ -130,7 +135,9 @@ func (h *fortuneHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	if _, err := w.Write(jsonBytes); err != nil {
+		log.Println("Get: failed to write response:", err)
+	}
 }
 
 func (h *fortuneHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -156,17 +163,23 @@ func (h *fortuneHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonBytes)
+	if _, err := w.Write(jsonBytes); err != nil {
+		log.Println("Create: failed to write response:", err)
+	}
 }
 
 func internalServerError(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("internal server error"))
+	if _, err := w.Write([]byte("internal server error")); err != nil {
+		log.Println("internalServerError: failed to write response:", err)
+	}
 }
 
 func notFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("not found"))
+	if _, err := w.Write([]byte("not found")); err != nil {
+		log.Println("notFound: failed to write response:", err)
+	}
 }
 
 func main() {

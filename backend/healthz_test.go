@@ -20,8 +20,8 @@ func (f *fakeRedisConn) Do(commandName string, args ...interface{}) (interface{}
 	return nil, nil
 }
 func (f *fakeRedisConn) Send(commandName string, args ...interface{}) error { return nil }
-func (f *fakeRedisConn) Flush() error                                      { return nil }
-func (f *fakeRedisConn) Receive() (interface{}, error)                     { return nil, nil }
+func (f *fakeRedisConn) Flush() error                                       { return nil }
+func (f *fakeRedisConn) Receive() (interface{}, error)                      { return nil, nil }
 
 func TestHealthz_NoRedisConfigured(t *testing.T) {
 	usingRedis = false

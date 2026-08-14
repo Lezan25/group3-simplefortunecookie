@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 type healthzHandler struct{}
 
@@ -10,11 +13,15 @@ func (h *healthzHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if usingRedis {
 		if _, err := dbLink.Do("PING"); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"unavailable","redis":"down"}`))
+			if _, writeErr := w.Write([]byte(`{"status":"unavailable","redis":"down"}`)); writeErr != nil {
+				log.Println("healthz: failed to write response:", writeErr)
+			}
 			return
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
+	if _, err := w.Write([]byte(`{"status":"ok"}`)); err != nil {
+		log.Println("healthz: failed to write response:", err)
+	}
 }

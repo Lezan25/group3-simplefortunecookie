@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -33,7 +34,9 @@ var myClient httpClient = &http.Client{Timeout: 10 * time.Second}
 
 func HealthzHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "healthy")
+	if _, err := io.WriteString(w, "healthy"); err != nil {
+		log.Println("HealthzHandler: failed to write response:", err)
+	}
 }
 
 func RandomHandler(w http.ResponseWriter, r *http.Request) {
@@ -44,9 +47,14 @@ func RandomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f := new(fortune)
-	json.NewDecoder(resp.Body).Decode(f)
+	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
+		http.Error(w, "invalid response from fortune service", http.StatusBadGateway)
+		return
+	}
 
-	fmt.Fprint(w, f.Message)
+	if _, err := fmt.Fprint(w, f.Message); err != nil {
+		log.Println("RandomHandler: failed to write response:", err)
+	}
 }
 
 func AllHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +65,10 @@ func AllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fortunes := new([]fortune)
-	json.NewDecoder(resp.Body).Decode(fortunes)
+	if err := json.NewDecoder(resp.Body).Decode(fortunes); err != nil {
+		http.Error(w, "invalid response from fortune service", http.StatusBadGateway)
+		return
+	}
 
 	tmpl, err := template.ParseFiles("./templates/fortunes.html")
 	if err != nil {
@@ -65,7 +76,9 @@ func AllHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.Execute(w, fortunes)
+	if err := tmpl.Execute(w, fortunes); err != nil {
+		log.Println("AllHandler: failed to render template:", err)
+	}
 }
 
 func AddHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +88,10 @@ func AddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f := new(newFortune)
-	json.NewDecoder(r.Body).Decode(f)
+	if err := json.NewDecoder(r.Body).Decode(f); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
 	postUrl := fmt.Sprintf("http://%s:%s/fortunes", BACKEND_DNS, BACKEND_PORT)
 	jsonStr := []byte(fmt.Sprintf(`{"id": "%d", "message": "%s"}`, rand.Intn(10000), f.Message))
@@ -86,7 +102,9 @@ func AddHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, "Cookie added!")
+	if _, err := fmt.Fprint(w, "Cookie added!"); err != nil {
+		log.Println("AddHandler: failed to write response:", err)
+	}
 }
 
 func main() {
