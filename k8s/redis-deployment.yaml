@@ -1,9 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis
+  name: redis-__ENV__
   labels:
     app: redis
+    env: __ENV__
 spec:
   replicas: 1
   strategy:
@@ -11,10 +12,12 @@ spec:
   selector:
     matchLabels:
       app: redis
+      env: __ENV__
   template:
     metadata:
       labels:
         app: redis
+        env: __ENV__
     spec:
       containers:
         - name: redis
@@ -27,4 +30,4 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: redis
+            claimName: redis-__ENV__

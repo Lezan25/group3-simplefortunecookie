@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-__ENV__
+  labels:
+    app: backend
+    env: __ENV__
+    track: stable
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: backend
+      env: __ENV__
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: backend
+        env: __ENV__
+        track: stable
+    spec:
+      containers:
+        - name: backend
+          image: aljazkni/simplefortunecookie-backend:__IMAGE_TAG__
+          ports:
+            - containerPort: 9000
+          env:
+            - name: REDIS_DNS
+              value: "redis://redis-__ENV__:6379"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 10
