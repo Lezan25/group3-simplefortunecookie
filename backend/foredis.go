@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var dbLink redis.Conn
+var dbPool *redis.Pool
 var usingRedis = false
 
 func init() {
@@ -18,9 +18,23 @@ func init() {
 		fmt.Println("redis config not set")
 		return
 	}
+
+	addr := getEnv("REDIS_DNS", "localhost:6379")
+
+	pool := &redis.Pool{
+		MaxIdle:     10,
+		MaxActive:   50,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", addr)
+		},
+	}
+
 	var err error
 	for i := 0; i < 5; i++ {
-		dbLink, err = redis.Dial("tcp", getEnv("REDIS_DNS", "localhost:6379"))
+		conn := pool.Get()
+		_, err = conn.Do("PING")
+		conn.Close()
 		if err == nil {
 			usingRedis = true
 			break
@@ -34,7 +48,12 @@ func init() {
 		return
 	}
 
-	resKeys, err := redis.Values(dbLink.Do("hkeys", "fortunes"))
+	dbPool = pool
+
+	conn := dbPool.Get()
+	defer conn.Close()
+
+	resKeys, err := redis.Values(conn.Do("hkeys", "fortunes"))
 	if err != nil {
 		fmt.Println("redis hkeys failed", err.Error())
 		return
@@ -43,7 +62,7 @@ func init() {
 	datastoreDefault = datastore{m: map[string]fortune{}, RWMutex: &sync.RWMutex{}}
 	fmt.Printf("*** loading redis fortunes:\n")
 	for _, key := range resKeys {
-		val, err := dbLink.Do("hget", "fortunes", key)
+		val, err := conn.Do("hget", "fortunes", key)
 		if err != nil {
 			fmt.Println("redis hget failed", err.Error())
 		} else {
