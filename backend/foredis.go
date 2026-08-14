@@ -20,7 +20,7 @@ func init() {
 	}
 	var err error
 	for i := 0; i < 5; i++ {
-		dbLink, err = redis.Dial("tcp", fmt.Sprintf("%s", getEnv("REDIS_DNS", "localhost:6379")))
+		dbLink, err = redis.Dial("tcp", getEnv("REDIS_DNS", "localhost:6379"))
 		if err == nil {
 			usingRedis = true
 			break
