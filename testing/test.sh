@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FRONTEND_URL="${1:-http://localhost:8080}"
-BACKEND_URL="${2:-http://backend-v1:9000}"
+BACKEND_URL="${2:-http://localhost:9000}"
 
 MAX_ATTEMPTS=10
 WAIT_SECONDS=2
