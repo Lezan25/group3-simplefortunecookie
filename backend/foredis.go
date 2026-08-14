@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"log"
+	"os"
 	"sync"
 	"time"
-	"os"
 )
 
 var dbLink redis.Conn
@@ -20,7 +20,7 @@ func init() {
 	}
 	var err error
 	for i := 0; i < 5; i++ {
-		dbLink, err = redis.Dial("tcp", fmt.Sprintf("%s:6379", getEnv("REDIS_DNS", "localhost")))
+		dbLink, err = redis.Dial("tcp", fmt.Sprintf("%s", getEnv("REDIS_DNS", "localhost:6379")))
 		if err == nil {
 			usingRedis = true
 			break
@@ -47,8 +47,8 @@ func init() {
 		if err != nil {
 			fmt.Println("redis hget failed", err.Error())
 		} else {
-			idx := fmt.Sprintf("%s", key.([]byte))
-			msg := fmt.Sprintf("%s", val.([]byte))
+			idx := string(key.([]byte))
+			msg := string(val.([]byte))
 			datastoreDefault.m[idx] = fortune{ID: idx, Message: msg}
 			fmt.Printf("%s => %s\n", key, val)
 		}
