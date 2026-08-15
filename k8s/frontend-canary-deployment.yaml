@@ -25,11 +25,9 @@ spec:
           image: aljazkni/simplefortunecookie-frontend:__IMAGE_TAG__
           ports:
             - containerPort: 8080
-          env:
-            - name: BACKEND_DNS
-              value: "backend-__ENV__"
-            - name: BACKEND_PORT
-              value: "9000"
+          envFrom:
+            - configMapRef:
+                name: config-__ENV__
           readinessProbe:
             httpGet:
               path: /healthz
