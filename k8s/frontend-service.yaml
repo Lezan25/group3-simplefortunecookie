@@ -3,11 +3,11 @@ kind: Service
 metadata:
   name: frontend-__ENV__
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: frontend
     env: __ENV__
-    track: stable
+    expose: "true"
   ports:
     - port: 8080
       targetPort: 8080

@@ -4,6 +4,7 @@ set -euo pipefail
 # Usage:
 #   deploy.sh <branch-name> <kubeconfig-path> canary <image-tag>
 #   deploy.sh <branch-name> <kubeconfig-path> test
+#   deploy.sh <branch-name> <kubeconfig-path> canary-live
 #   deploy.sh <branch-name> <kubeconfig-path> promote <image-tag>
 #   deploy.sh <branch-name> <kubeconfig-path> rollback
 #   deploy.sh <branch-name> <kubeconfig-path> delete
@@ -78,6 +79,15 @@ case "$ACTION" in
 
     chmod +x testing/test.sh
     ./testing/test.sh http://localhost:8080 http://localhost:9000
+    ;;
+
+  canary-live)
+    echo "Adding canary to live rotation (env=$SUFFIX)"
+    PATCH='{"spec":{"template":{"metadata":{"labels":{"expose":"true"}}}}}'
+    "${KUBECTL[@]}" patch deployment "backend-$SUFFIX-canary" --type merge -p "$PATCH"
+    "${KUBECTL[@]}" patch deployment "frontend-$SUFFIX-canary" --type merge -p "$PATCH"
+    "${KUBECTL[@]}" rollout status "deployment/backend-$SUFFIX-canary" --timeout=120s
+    "${KUBECTL[@]}" rollout status "deployment/frontend-$SUFFIX-canary" --timeout=120s
     ;;
 
   promote)
