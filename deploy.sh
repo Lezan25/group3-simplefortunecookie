@@ -52,7 +52,7 @@ case "$ACTION" in
     WORKDIR=$(mktemp -d)
     trap 'rm -rf "$WORKDIR"' EXIT
 
-    render "$WORKDIR" redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-canary-deployment.yaml frontend-canary-deployment.yaml
+    render "$WORKDIR" configmap.yaml redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-canary-deployment.yaml frontend-canary-deployment.yaml
 
     echo "Deploying canary (env=$SUFFIX, tag=$IMAGE_TAG)"
     "${KUBECTL[@]}" apply -f "$WORKDIR"
@@ -99,7 +99,7 @@ case "$ACTION" in
     WORKDIR=$(mktemp -d)
     trap 'rm -rf "$WORKDIR"' EXIT
 
-    render "$WORKDIR" redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-deployment.yaml frontend-deployment.yaml backend-service.yaml frontend-service.yaml
+    render "$WORKDIR" configmap.yaml redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-deployment.yaml frontend-deployment.yaml backend-service.yaml frontend-service.yaml
 
     echo "Promoting to stable (env=$SUFFIX, tag=$IMAGE_TAG)"
     "${KUBECTL[@]}" apply -f "$WORKDIR"
@@ -120,7 +120,7 @@ case "$ACTION" in
     WORKDIR=$(mktemp -d)
     trap 'rm -rf "$WORKDIR"' EXIT
 
-    render "$WORKDIR" redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-deployment.yaml frontend-deployment.yaml backend-service.yaml frontend-service.yaml
+    render "$WORKDIR" configmap.yaml redis-pvc.yaml redis-deployment.yaml redis-service.yaml backend-deployment.yaml frontend-deployment.yaml backend-service.yaml frontend-service.yaml
 
     echo "Deleting environment: $SUFFIX"
     "${KUBECTL[@]}" delete -f "$WORKDIR" --ignore-not-found
