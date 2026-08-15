@@ -137,11 +137,26 @@ jobs:
           chmod +x ./deploy.sh
           ./deploy.sh "${{ github.ref_name }}" kubeconfig test
 
+  canary-live:
+    name: Add Canary to Live Traffic
+    runs-on: ubuntu-latest
+    needs: canary-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubeconfig
+        run: echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+
+      - name: Go live
+        run: |
+          chmod +x ./deploy.sh
+          ./deploy.sh "${{ github.ref_name }}" kubeconfig canary-live
+
   promote:
     name: Promote Canary to Stable
     runs-on: ubuntu-latest
-    needs: canary-test
-    if: success()
+    needs: canary-live
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -156,7 +171,7 @@ jobs:
   rollback:
     name: Roll Back Canary
     runs-on: ubuntu-latest
-    needs: canary-test
+    needs: [canary-test, canary-live, promote]
     if: failure()
     steps:
       - uses: actions/checkout@v4

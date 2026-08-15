@@ -23,6 +23,7 @@ spec:
         app: backend
         env: __ENV__
         track: stable
+        expose: "true"
     spec:
       containers:
         - name: backend
